@@ -1,63 +1,184 @@
+// constante y captura eventos
+const Clickbutton = document.querySelectorAll('.button')
+const tbody = document.querySelector('.tbody')
+let ShopingCar = []
+let contenido = document.querySelector("#Productos")
 
-const items = document.getElementById('items')
-const templateCard = document.getElementById('template-card').content
-let fragment = document.createDocumentFragment();
+// funcion consumo/obtener datos de API
+function mostrar(){
+    fetch('http://localhost:3300/api/product')
+        .then(res => res.json())
+        .then((producto) => {
+            console.log(producto[0])
+            let productoJson = Object.keys(producto).length;
 
-document.addEventListener('DOMContentLoaded', () =>{
-    fetchData()
+
+            for (let i = 0; i < productoJson; i++) {
+                contenido.innerHTML += `
+
+               <div class="col d-flex justify-content-center mb-4">
+                <div class="card shadow mb-1 bg-dark rounded" style="width: 20rem;">
+                    <h5 class="card-name pt-2 text-center text-primary">${producto[i].name}</h5>
+                    <img src="${producto[i].url_image}" class="card-img-top" alt="...">
+                    <div class="card-body ">
+                       
+                        <h5 class="text-primary">Precio: <span class="price">${producto[i].price}</span></h5>
+                            <h5 class="text-primary">Discount: <span class="discount">${producto[i].discount}</span></h5>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary button d-block">Añadir a Comprar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+      `
+            }
+        })
+}
+mostrar()
+
+Clickbutton.forEach(btn => {
+    btn.addEventListener('click', getShopingCar)
 })
 
-const fetchData = async () => {
-try{
-    const res = await fetch('https://jsonplaceholder.typicode.com/todos/1')// la url
-    const  data= await res.json()
-    //console.log(data)
-    getCarShopping(data)
-} catch (error) {
-         console.log(error)
+//FUNCION PARA CREAR CARRO DE COMPRAS
+function getShopingCar(e){
+
+    const button = e.target
+    const producto = button.closest('.card')
+
+    const productoTitle = producto.name;
+    const productoImg = producto.url_image;
+    const productoPrice = producto.price;
+    const productoCategroria = producto.category;
+
+
+    const newProducto = {
+        title: productoTitle,
+        precio: productoPrice,
+        img: productoImg,
+        categoria: productoCategroria,
+        cantidad: 1
+    }
+
+    addShopingCar(newProducto)
 }
+//AGREGAR PRODUCTOS CARRO DE COMPRAS
+function addShopingCar(newProducto){
+
+    const alert = document.querySelector('.alert')
+
+    setTimeout( function(){
+        alert.classList.add('hide')
+    }, 2000)
+    alert.classList.remove('hide')
+
+
+    const InputElemnto = tbody.getElementsByClassName('input__elemento')
+    for(let i= 0; i<ShopingCar.length; i++){
+        if(ShopingCar[i].title.trim() === newProducto.title.trim()){
+            ShopingCar[i].cantidad ++;
+            const inputValue = InputElemnto[i]
+            inputValue.value++;
+            ShopingCarTotal()
+            return null;
+        }
+    }
+
+    ShopingCar.push(newProducto)
+
+    renderShopingCar()
+}
+
+
+function renderShopingCar(){
+    tbody.innerHTML = ''
+    ShopingCar.map(producto => {
+        const tr = document.createElement('tr')
+        tr.classList.add('ItemShopingCar')
+        const Content = `
     
-}
+                <th scope="row">1</th>
+                <td class="table__productos">
+                    <img src= ${producto.img} alt="">
+                <h6 class="title">${producto.title}</h6>
+                <td class="precio"><p>${producto.precio}</p></td>
+                <td class="cantidad">
+                    <input type="number" min="1" value=${producto.cantidad} class="input__elemento">
+                    <button class="delete btn btn-danger">x</button>
+                </td>
+           
+    `
+        tr.innerHTML = Content;
+        tbody.append(tr)
 
-const getCarShopping = data => {
-    data.forEach(producto => {
-        console.log(producto)
-        templateCard.querySelector('h2').textContent = producto.tittle //`h5`
-
-        const clone = templateCard.cloneNode(true)
-        fragment.appendChild(clone)
+        tr.querySelector(".delete").addEventListener('click', removeItemShopingCar)
+        tr.querySelector(".input__elemento").addEventListener('change', sumaCantidad)
     })
-    items.appendChild(fragment)
+    ShopingCarTotal()
 }
 
+//TOTAL CARRO DE COMPRAS
+function ShopingCarTotal(){
+    let Total = 0;
+    const itemCartTotal = document.querySelector('.itemCartTotal')
+    ShopingCar.forEach((producto) => {
+        const precio = Number(producto.precio.replace("$", ''))
+        Total = Total + precio*producto.cantidad
+    })
 
+    itemCartTotal.innerHTML = `Total $${Total}`
+    addLocalStorage
 
-/*
-fetch('https://jsonplaceholder.typicode.com/todos/1')
-  .then(response => response.json())
-  .then(json => console.log(json))
+}
+//REMOVERE DE CARRO DE COMPRAS
+function removeItemShopingCar(e){
+    const buttonDelete = e.target
+    const tr = buttonDelete.closest(".ItemShopingCar")
+    const title = tr.querySelector('.title').textContent;
+    for(let i=0; i<ShopingCar.length ; i++){
 
+        if(ShopingCar[i].title.trim() === title.trim()){
+            ShopingCar.splice(i, 1)
+        }
+    }
 
-let carShopping = {
-    1: {nombre: "item 1"},
-    2: {nombre: "item 2"},
-    3: {nombre: "item 3"},
-    4: {nombre: "item 4"}
+    const alert = document.querySelector('.remove')
+    setTimeout( function(){
+        alert.classList.add('remove')
+    }, 2000)
+    alert.classList.remove('remove')
 
-};
+    tr.remove()
+    ShopingCarTotal()
+}
 
-for (const key in carShopping) {
-    if (carShopping.hasOwnProperty(key)){
-        const element = carShopping[key];
-        console.log(element)
+//OBTENER TOTAL DE COMPRA
+console.log(ShopingCar)
+function sumaCantidad(e){
+    const sumaInput  = e.target
+    const tr = sumaInput.closest(".ItemShopingCar")
+    const title = tr.querySelector('.title').textContent;
+    ShopingCar.forEach(producto => {
+        if(producto.title.trim() === title){
+            sumaInput.value < 1 ?  (sumaInput.value = 1) : sumaInput.value;
+            producto.cantidad = sumaInput.value;
+            ShopingCarTotal()
+        }
+
+    })
+
+}
+//GUARDAR EN LOCAL STORAGE
+function addLocalStorage(){
+    localStorage.setItem('ShopingCar', JSON.stringify(ShopingCar))
+}
+
+window.onload = function(){
+    const storage = JSON.parse(localStorage.getItem('ShopingCar'));
+    if(storage){
+        ShopingCar = storage;
+        renderShopingCar()
     }
 }
-
-Object.values(carShopping).forEach((item) => console.log(item));
-
-console.log(carShopping[1]);
-console.log(Object.keys(carShopping));
-console.log(Object.keys(carShopping).length);
-
-
-*/
